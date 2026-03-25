@@ -1,0 +1,40 @@
+name: Extract WHO INN PDF
+
+on:
+  workflow_dispatch:
+    inputs:
+      pdf_url:
+        description: "Public URL of the WHO INN PDF"
+        required: true
+      publication_date:
+        description: "Publication date (YYYY-MM-DD)"
+        required: false
+      model:
+        description: "Claude model (claude-opus-4-6 or claude-haiku-4-5)"
+        default: "claude-opus-4-6"
+        required: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install extractor
+        run: pip install -e packages/extractor
+
+      - name: Run pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python -m src.pipeline \
+            --url "${{ github.event.inputs.pdf_url }}" \
+            --model "${{ github.event.inputs.model }}" \
+            ${{ github.event.inputs.publication_date && format('--date {0}', github.event.inputs.publication_date) || '' }}
+        working-directory: packages/extractor

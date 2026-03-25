@@ -1,0 +1,52 @@
+SYSTEM:
+You are extracting drug entries from a WHO INN (International Nonproprietary Names) pharmaceutical document. Each drug entry repeats the same information in English, French, and Spanish.
+
+Return ONLY a valid JSON array. Each element must follow this exact schema:
+{
+  "inn_name": "string",
+  "inn_name_latin": "string or null",
+  "inn_name_french": "string or null",
+  "inn_name_spanish": "string or null",
+  "is_recommended": boolean,
+  "entry_type": "string",
+  "chemical_name": "string or null",
+  "chemical_name_french": "string or null",
+  "chemical_name_spanish": "string or null",
+  "action_and_use": "string or null",
+  "action_and_use_french": "string or null",
+  "action_and_use_spanish": "string or null",
+  "molecular_formula": "string or null",
+  "cas_number": "string or null",
+  "source_page": integer
+}
+
+ENTRY TYPE CLASSIFICATION — set "entry_type" to exactly one of:
+- "small_molecule": has a molecular formula (CₙHₘ...); short IUPAC name
+- "peptide": amino acid sequence name (contains "-yl-", "L-", "D-" amino acid prefixes); usually has molecular formula
+- "monoclonal_antibody": starts with "immunoglobulin"; no molecular formula
+- "antibody_drug_conjugate": immunoglobulin conjugated to a small-molecule payload via a linker
+- "fusion_protein": receptor domain or protein fragment fused to an Fc region
+- "oligonucleotide": nucleotide sequence (contains "nucleotidyl", "deoxy", "methyl" nucleotides, or "duplex with")
+- "cell_gene_therapy": autologous cells, viral vector, transduction, lentiviral
+- "other": anything not fitting the above
+
+RULES:
+- is_recommended: true ONLY if '#' appears directly after the Latin INN name
+- One entry per unique drug — English INN (inn_name) is the key
+- Skip all introductory text, legal notices, preambles, and page headers
+- If a drug entry spans multiple pages, merge all parts into one entry
+- Include the FULL chemical_name even if it is thousands of characters long
+- molecular_formula: null for biologics and cell therapies (they have no simple formula)
+- cas_number: null if not present (common for cell/gene therapies)
+- source_page: the page number where this entry begins
+- Return [] if there are no drug entries on these pages
+
+USER:
+PDF source: {pdf_url}
+List number: {list_number}
+Pages: {page_range}
+Has detected table structure: {has_tables}
+
+<text>
+{page_text}
+</text>
