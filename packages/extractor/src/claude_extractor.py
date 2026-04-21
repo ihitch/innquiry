@@ -17,6 +17,8 @@ PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extraction.txt"
 
 # claude-haiku-4-5-20251001 for cost-effective extraction (~$1/list); swap to claude-opus-4-6 for best accuracy
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+# Amendments section has a denser, easy-to-confuse layout — use a stronger model by default.
+DEFAULT_AMENDMENT_MODEL = "claude-sonnet-4-6"
 
 # Small delay between requests
 REQUEST_DELAY_SECONDS = 0.5
@@ -37,10 +39,18 @@ def _build_client() -> anthropic.Anthropic:
 
 
 class ClaudeExtractor:
-    def __init__(self, model: str = DEFAULT_MODEL):
+    def __init__(
+        self,
+        model: str = DEFAULT_MODEL,
+        amendment_model: str = DEFAULT_AMENDMENT_MODEL,
+    ):
         self.client = _build_client()
         self.model = model
+        self.amendment_model = amendment_model
         self._prompt_template = _load_prompt()
+
+    def _model_for(self, chunk: PageChunk) -> str:
+        return self.amendment_model if chunk.is_amendment_section else self.model
 
     def _build_messages(self, chunk: PageChunk) -> tuple[list[dict], str]:
         page_range = f"{chunk.pages[0]}-{chunk.pages[-1]}"
@@ -66,11 +76,12 @@ class ClaudeExtractor:
     def extract_chunk(self, chunk: PageChunk) -> list[dict]:
         """Extract drug entries from a single page chunk."""
         messages, system = self._build_messages(chunk)
+        model = self._model_for(chunk)
 
         time.sleep(REQUEST_DELAY_SECONDS)
 
         response = self.client.messages.create(
-            model=self.model,
+            model=model,
             max_tokens=16000,
             system=system,
             messages=messages,

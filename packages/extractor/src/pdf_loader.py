@@ -18,6 +18,27 @@ class PageChunk:
     has_tables: bool          # pdfplumber detected table structure
     pdf_url: str
     list_number: int
+    is_amendment_section: bool = False
+
+
+# Once we see any of these, every subsequent chunk is part of the Amendments section.
+# The section always sits at the tail of the PDF, so latching forward is safe.
+_AMENDMENT_SECTION_MARKERS = re.compile(
+    r"\bAmendments?\s+to\s+(previous|previously\s+published)\b"
+    r"|\bModifications\s+aux\s+listes\b"
+    r"|\bModificaciones\s+a\s+las\s+listas\b",
+    re.IGNORECASE,
+)
+
+# Per-chunk fallback markers — catch amendment content even if the heading was on a prior page.
+_AMENDMENT_CONTENT_MARKERS = re.compile(
+    r"replace\s+the\s+chemical\s+name"
+    r"|remplacer\s+le\s+nom\s+chimique"
+    r"|sustituir\s+el\s+nombre\s+qu[ií]mico"
+    r"|\bsupprimer\b.+\bins[eé]rer\b"
+    r"|\bdelete\b.+\binsert\b",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _detect_list_number(text: str) -> int:
@@ -26,6 +47,10 @@ def _detect_list_number(text: str) -> int:
     if match:
         return int(match.group(1))
     return 0
+
+
+def _looks_like_amendment(text: str) -> bool:
+    return bool(_AMENDMENT_SECTION_MARKERS.search(text) or _AMENDMENT_CONTENT_MARKERS.search(text))
 
 
 def download_and_chunk(pdf_url: str, chunk_size: int = 5) -> list[PageChunk]:
@@ -56,11 +81,17 @@ def chunk_pdf(pdf_path: Path, pdf_url: str, chunk_size: int = 5) -> list[PageChu
         if pages_data:
             list_number = _detect_list_number(pages_data[0][1])
 
+        in_amendments = False
         for start in range(0, len(pages_data), chunk_size):
             batch = pages_data[start : start + chunk_size]
             combined_text = "\n\n".join(text for _, text, _ in batch)
             has_tables = any(ht for _, _, ht in batch)
             page_nums = [pn for pn, _, _ in batch]
+
+            if not in_amendments and _AMENDMENT_SECTION_MARKERS.search(combined_text):
+                in_amendments = True
+            is_amendment = in_amendments or _looks_like_amendment(combined_text)
+
             chunks.append(
                 PageChunk(
                     pages=page_nums,
@@ -68,6 +99,7 @@ def chunk_pdf(pdf_path: Path, pdf_url: str, chunk_size: int = 5) -> list[PageChu
                     has_tables=has_tables,
                     pdf_url=pdf_url,
                     list_number=list_number,
+                    is_amendment_section=is_amendment,
                 )
             )
 

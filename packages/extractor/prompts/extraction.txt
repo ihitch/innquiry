@@ -48,6 +48,50 @@ The PDF contains TWO main sections:
 
 CRITICAL: amendments use a different layout. Do NOT let amendment data leak onto the next entry. The molecular formula appearing in an amendment block belongs to the INN named at the start of THAT block, not to whatever comes next.
 
+WORKED EXAMPLE of an Amendments-section split (critical to get right):
+
+Input text:
+    p.454-455 acmopatidum
+    acmopatide acmopatida
+    replace the chemical name, the molecular formula and structure by the following ones
+    N-{[(2-oxo-2-{[2-(2-oxopiperidin-1-yl)ethyl]amino}ethyl)sulfanyl]acetyl}-L-α-glutamyl-...
+    N-{[(2-oxo-2-{[2-(2-oxopipéridin-1-yl)éthyl]amino}éthyl)sulfanyl]acétyl}-L-α-glutamyl-...
+    N-{[(2-oxo-2-{[2-(2-oxopiperidin-1-il)etil]amino}etil)sulfanil]acetil}-L-α-glutamil-...
+    C214H323N47O64S
+    p.460 adupégimerum
+    adupégimère adupégimera
+    replace the chemical name by the following one
+    [new EN chemical name]
+    [new FR chemical name]
+    [new ES chemical name]
+
+Correct output (TWO separate entries — the formula belongs to acmopatidum, NOT adupégimère):
+[
+  {
+    "inn_name": "acmopatide",
+    "inn_name_latin": "acmopatidum",
+    "inn_name_french": "acmopatide",
+    "inn_name_spanish": "acmopatida",
+    "is_amendment": true,
+    "original_list_reference": "p.454-455",
+    "chemical_name": "N-{[(2-oxo-2-{[2-(2-oxopiperidin-1-yl)ethyl]amino}ethyl)sulfanyl]acetyl}-L-α-glutamyl-...",
+    "chemical_name_french": "N-{[(2-oxo-2-{[2-(2-oxopipéridin-1-yl)éthyl]amino}éthyl)sulfanyl]acétyl}-L-α-glutamyl-...",
+    "chemical_name_spanish": "N-{[(2-oxo-2-{[2-(2-oxopiperidin-1-il)etil]amino}etil)sulfanil]acetil}-L-α-glutamil-...",
+    "molecular_formula": "C214H323N47O64S",
+    "entry_type": "peptide", ...
+  },
+  {
+    "inn_name": "adupégimère",
+    "inn_name_latin": "adupégimerum",
+    "is_amendment": true,
+    "original_list_reference": "p.460",
+    "chemical_name": "[new EN chemical name]",
+    "molecular_formula": null, ...
+  }
+]
+
+Rule: every amendment block ENDS where the NEXT "p.XXX <latinname>" line begins. Everything between those two markers (including any molecular formula on its own line) belongs to the entry that opened the block.
+
 PDF EXTRACTION QUIRKS — important:
 - Molecular formula subscript numbers are often on a SEPARATE LINE from the element symbols.
   e.g. the text may show:

@@ -11,7 +11,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from .claude_extractor import ClaudeExtractor, DEFAULT_MODEL
+from .claude_extractor import ClaudeExtractor, DEFAULT_AMENDMENT_MODEL, DEFAULT_MODEL
 from .db_writer import write_batch
 from .normalizer import validate_and_deduplicate
 from .pdf_loader import PageChunk, chunk_pdf, download_and_chunk
@@ -19,12 +19,13 @@ from .pdf_loader import PageChunk, chunk_pdf, download_and_chunk
 
 def run(
     pdf_url: str,
-    model: str = "claude-opus-4-6",
+    model: str = DEFAULT_MODEL,
+    amendment_model: str = DEFAULT_AMENDMENT_MODEL,
     local_path: Path | None = None,
     publication_date: date | None = None,
     dry_run: bool = False,
 ) -> None:
-    print(f"innquiry extractor — model: {model}")
+    print(f"innquiry extractor — model: {model} (amendments: {amendment_model})")
     print(f"Source: {pdf_url}")
 
     # Load PDF
@@ -40,10 +41,11 @@ def run(
         sys.exit(1)
 
     list_number = chunks[0].list_number
+    amendment_chunks = sum(1 for c in chunks if c.is_amendment_section)
     print(f"INN List number detected: {list_number}")
-    print(f"Total chunks: {len(chunks)}")
+    print(f"Total chunks: {len(chunks)} ({amendment_chunks} amendment-section)")
 
-    extractor = ClaudeExtractor(model=model)
+    extractor = ClaudeExtractor(model=model, amendment_model=amendment_model)
     all_raw: list[dict] = []
 
     for chunk in tqdm(chunks, desc="Extracting"):
@@ -87,7 +89,12 @@ def main() -> None:
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help=f"OpenRouter model ID (default: {DEFAULT_MODEL})",
+        help=f"Anthropic model for regular INN chunks (default: {DEFAULT_MODEL})",
+    )
+    parser.add_argument(
+        "--amendment-model",
+        default=DEFAULT_AMENDMENT_MODEL,
+        help=f"Anthropic model for Amendments-section chunks (default: {DEFAULT_AMENDMENT_MODEL})",
     )
     parser.add_argument(
         "--date",
@@ -106,6 +113,7 @@ def main() -> None:
     run(
         pdf_url=args.url,
         model=args.model,
+        amendment_model=args.amendment_model,
         local_path=local_path,
         publication_date=pub_date,
         dry_run=args.dry_run,
