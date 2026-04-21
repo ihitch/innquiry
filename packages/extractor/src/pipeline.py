@@ -11,7 +11,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from .claude_extractor import ClaudeExtractor
+from .claude_extractor import ClaudeExtractor, DEFAULT_MODEL
 from .db_writer import write_batch
 from .normalizer import validate_and_deduplicate
 from .pdf_loader import PageChunk, chunk_pdf, download_and_chunk
@@ -52,7 +52,12 @@ def run(
             entries = extractor.extract_chunk(chunk)
             all_raw.extend(entries)
         except Exception as e:
-            print(f"\n  [error] chunk pages {page_range}: {e}")
+            cause = getattr(e, "last_attempt", None)
+            if cause:
+                inner = cause.exception()
+                print(f"\n  [error] chunk pages {page_range}: {type(inner).__name__}: {inner}")
+            else:
+                print(f"\n  [error] chunk pages {page_range}: {type(e).__name__}: {e}")
 
     print(f"\nRaw entries extracted: {len(all_raw)}")
 
@@ -81,8 +86,8 @@ def main() -> None:
     parser.add_argument("--local", help="Path to local PDF file (skips download)")
     parser.add_argument(
         "--model",
-        default="claude-opus-4-6",
-        help="Claude model ID (default: claude-opus-4-6)",
+        default=DEFAULT_MODEL,
+        help=f"OpenRouter model ID (default: {DEFAULT_MODEL})",
     )
     parser.add_argument(
         "--date",

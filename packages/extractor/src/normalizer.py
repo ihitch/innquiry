@@ -24,6 +24,8 @@ class DrugEntry(BaseModel):
     inn_name_french: Optional[str] = None
     inn_name_spanish: Optional[str] = None
     is_recommended: bool = False
+    is_amendment: bool = False
+    original_list_reference: Optional[str] = None
     entry_type: EntryType = "other"
     chemical_name: Optional[str] = None
     chemical_name_french: Optional[str] = None
@@ -33,7 +35,7 @@ class DrugEntry(BaseModel):
     action_and_use_spanish: Optional[str] = None
     molecular_formula: Optional[str] = None
     cas_number: Optional[str] = None
-    source_page: int = Field(default=0, ge=0)
+    source_page: Optional[int] = Field(default=None, ge=0)
 
     @field_validator("inn_name")
     @classmethod
@@ -52,14 +54,18 @@ class DrugEntry(BaseModel):
 def validate_and_deduplicate(
     raw_entries: list[dict], list_number: int
 ) -> list[DrugEntry]:
-    """Validate entries with Pydantic and deduplicate on inn_name."""
-    seen: dict[str, DrugEntry] = {}
+    """Validate entries with Pydantic and deduplicate on (inn_name, is_amendment).
+
+    A drug may appear both as a new INN and as an amendment to a previously
+    published INN in the same document, so both variants must be kept.
+    """
+    seen: dict[tuple[str, bool], DrugEntry] = {}
     errors: list[str] = []
 
     for raw in raw_entries:
         try:
             entry = DrugEntry.model_validate(raw)
-            key = entry.inn_name  # already lowercased by validator
+            key = (entry.inn_name, entry.is_amendment)
             if key not in seen:
                 seen[key] = entry
         except Exception as e:

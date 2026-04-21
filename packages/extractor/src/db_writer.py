@@ -35,6 +35,8 @@ def write_batch(
             "inn_name_french": entry.inn_name_french,
             "inn_name_spanish": entry.inn_name_spanish,
             "is_recommended": entry.is_recommended,
+            "is_amendment": entry.is_amendment,
+            "original_list_reference": entry.original_list_reference,
             "entry_type": entry.entry_type,
             "molecular_formula": entry.molecular_formula,
             "cas_number": entry.cas_number,
@@ -52,10 +54,10 @@ def write_batch(
         for entry in entries
     ]
 
-    # Upsert on (inn_name, list_number) — constraint defined in migration
+    # Upsert on (inn_name, list_number, is_amendment) — constraint from 0002_amendments.sql
     result = (
         client.table("drugs")
-        .upsert(rows, on_conflict="inn_name,list_number")
+        .upsert(rows, on_conflict="inn_name,list_number,is_amendment")
         .execute()
     )
 

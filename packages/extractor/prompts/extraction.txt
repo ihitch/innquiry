@@ -8,6 +8,8 @@ Return ONLY a valid JSON array. Each element must follow this exact schema:
   "inn_name_french": "string or null",
   "inn_name_spanish": "string or null",
   "is_recommended": boolean,
+  "is_amendment": boolean,
+  "original_list_reference": "string or null",
   "entry_type": "string",
   "chemical_name": "string or null",
   "chemical_name_french": "string or null",
@@ -30,13 +32,41 @@ ENTRY TYPE CLASSIFICATION — set "entry_type" to exactly one of:
 - "cell_gene_therapy": autologous cells, viral vector, transduction, lentiviral
 - "other": anything not fitting the above
 
+AMENDMENTS SECTION — important:
+The PDF contains TWO main sections:
+  1. New INN entries ("Proposed INN" or "Recommended INN") — full entries with chemical name, formula, action/use, etc. Set is_amendment = false.
+  2. Amendments — corrections/updates to PREVIOUSLY published INNs. They typically appear after the main list under headings like "Amendments" or follow a pattern like:
+       p.454-455 acmopatidum
+       acmopatide acmopatida
+       replace the chemical name, the molecular formula and structure by the following ones
+       [new chemical name in EN]
+       [new chemical name in FR]
+       [new chemical name in ES]
+       C214H323N47O64S
+     For these, set is_amendment = true and put the page reference (e.g. "p.454-455") into original_list_reference. Capture whatever fields the amendment provides — usually only the changed ones (chemical_name, molecular_formula, etc.). Leave action_and_use NULL unless explicitly given.
+  3. Name corrections / "supprimer insérer" / "delete X insert Y" entries — also amendments. Set is_amendment = true, inn_name = the NEW name, inn_name_french/spanish = the new translations if given, original_list_reference = any page reference.
+
+CRITICAL: amendments use a different layout. Do NOT let amendment data leak onto the next entry. The molecular formula appearing in an amendment block belongs to the INN named at the start of THAT block, not to whatever comes next.
+
+PDF EXTRACTION QUIRKS — important:
+- Molecular formula subscript numbers are often on a SEPARATE LINE from the element symbols.
+  e.g. the text may show:
+    C H ClN O
+    13 13   4 3
+  Reconstruct this as: C13H13ClN4O3
+- The CAS number and molecular formula appear AFTER all three language blocks, just before the next entry's Latin name begins.
+- A chunk may begin with a CAS number/formula that belongs to the LAST entry of the previous chunk — include it if you can match it to an entry in this chunk, otherwise skip it.
+- A chunk may end mid-entry — include the partial entry with whatever fields are available; the deduplication step will merge it.
+
 RULES:
 - is_recommended: true ONLY if '#' appears directly after the Latin INN name
-- One entry per unique drug — English INN (inn_name) is the key
+- is_amendment: true for entries from the Amendments section; false for new INN entries
+- original_list_reference: for amendments, capture the page reference (e.g. "p.454-455") if present; otherwise null
+- One entry per unique (inn_name, is_amendment) pair — a drug may appear both as a new INN and as an amendment in the same document
 - Skip all introductory text, legal notices, preambles, and page headers
 - If a drug entry spans multiple pages, merge all parts into one entry
 - Include the FULL chemical_name even if it is thousands of characters long
-- molecular_formula: null for biologics and cell therapies (they have no simple formula)
+- molecular_formula: reconstruct from split subscript lines; null for biologics and cell therapies
 - cas_number: null if not present (common for cell/gene therapies)
 - source_page: the page number where this entry begins
 - Return [] if there are no drug entries on these pages

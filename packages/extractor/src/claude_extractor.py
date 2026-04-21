@@ -1,17 +1,25 @@
-"""Send PDF page chunks to Claude API and return structured drug entries."""
+"""Send PDF page chunks to Claude and return structured drug entries."""
 
 from __future__ import annotations
 
 import json
+import os
 import re
+import time
 from pathlib import Path
 
 import anthropic
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from .pdf_loader import PageChunk
 
 PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "extraction.txt"
+
+# claude-haiku-4-5-20251001 for cost-effective extraction (~$1/list); swap to claude-opus-4-6 for best accuracy
+DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+
+# Small delay between requests
+REQUEST_DELAY_SECONDS = 0.5
 
 
 def _load_prompt() -> str:
@@ -19,19 +27,22 @@ def _load_prompt() -> str:
 
 
 def _parse_json(text: str) -> list[dict]:
-    """Extract JSON array from Claude's response, even if wrapped in markdown."""
-    # Strip markdown code fences if present
+    """Extract JSON array from the response, even if wrapped in markdown."""
     text = re.sub(r"```(?:json)?\s*", "", text).strip().rstrip("`").strip()
     return json.loads(text)
 
 
+def _build_client() -> anthropic.Anthropic:
+    return anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+
 class ClaudeExtractor:
-    def __init__(self, model: str = "claude-opus-4-6"):
-        self.client = anthropic.Anthropic()
+    def __init__(self, model: str = DEFAULT_MODEL):
+        self.client = _build_client()
         self.model = model
         self._prompt_template = _load_prompt()
 
-    def _build_messages(self, chunk: PageChunk) -> list[dict]:
+    def _build_messages(self, chunk: PageChunk) -> tuple[list[dict], str]:
         page_range = f"{chunk.pages[0]}-{chunk.pages[-1]}"
         user_content = (
             self._prompt_template
@@ -47,27 +58,37 @@ class ClaudeExtractor:
         system_content = self._prompt_template.split("\nUSER:\n", 1)[0].removeprefix("SYSTEM:\n")
         return [{"role": "user", "content": user_content}], system_content
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=30))
+    @retry(
+        retry=retry_if_exception_type((anthropic.RateLimitError, anthropic.APIStatusError)),
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=2, min=10, max=120),
+    )
     def extract_chunk(self, chunk: PageChunk) -> list[dict]:
         """Extract drug entries from a single page chunk."""
         messages, system = self._build_messages(chunk)
 
+        time.sleep(REQUEST_DELAY_SECONDS)
+
         response = self.client.messages.create(
             model=self.model,
-            max_tokens=8096,
+            max_tokens=16000,
             system=system,
             messages=messages,
         )
 
-        raw = response.content[0].text.strip()
+        content = response.content[0].text if response.content else ""
+        if not content:
+            raise ValueError("Model returned empty response")
+        raw = content.strip()
 
         try:
             entries = _parse_json(raw)
         except json.JSONDecodeError:
             # Retry with a fix-it prompt
+            time.sleep(REQUEST_DELAY_SECONDS)
             fix_response = self.client.messages.create(
                 model=self.model,
-                max_tokens=8096,
+                max_tokens=16000,
                 system="You are a JSON repair assistant. Return only valid JSON.",
                 messages=[
                     {"role": "user", "content": f"Fix this invalid JSON and return only the corrected JSON array:\n\n{raw}"},

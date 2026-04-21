@@ -10,8 +10,8 @@ on:
         description: "Publication date (YYYY-MM-DD)"
         required: false
       model:
-        description: "Claude model (claude-opus-4-6 or claude-haiku-4-5)"
-        default: "claude-opus-4-6"
+        description: "Claude model ID"
+        default: "claude-haiku-4-5-20251001"
         required: false
 
 jobs:
