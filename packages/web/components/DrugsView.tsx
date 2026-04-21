@@ -145,6 +145,21 @@ function DrugDetail({ drug, onClose }: { drug: Drug; onClose: () => void }) {
           )}
           <Field label="INN List" value={String(drug.list_number)} />
           {drug.publication_date && <Field label="Publication Date" value={drug.publication_date} />}
+          {drug.source_pdf_url && (
+            <div>
+              <dt className="font-medium text-gray-500">Source</dt>
+              <dd className="mt-0.5">
+                <a
+                  href={drug.source_page ? `${drug.source_pdf_url}#page=${drug.source_page}` : drug.source_pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2 hover:no-underline"
+                >
+                  View in PDF{drug.source_page ? ` (page ${drug.source_page})` : ""} →
+                </a>
+              </dd>
+            </div>
+          )}
         </dl>
       </div>
     </div>
