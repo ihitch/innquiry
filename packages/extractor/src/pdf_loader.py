@@ -53,7 +53,7 @@ def _looks_like_amendment(text: str) -> bool:
     return bool(_AMENDMENT_SECTION_MARKERS.search(text) or _AMENDMENT_CONTENT_MARKERS.search(text))
 
 
-def download_and_chunk(pdf_url: str, chunk_size: int = 5) -> list[PageChunk]:
+def download_and_chunk(pdf_url: str, chunk_size: int = 5, overlap: int = 1) -> list[PageChunk]:
     """Download PDF from url, extract text per page, return chunks."""
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         response = requests.get(pdf_url, stream=True, timeout=60)
@@ -62,10 +62,10 @@ def download_and_chunk(pdf_url: str, chunk_size: int = 5) -> list[PageChunk]:
             tmp.write(block)
         tmp_path = Path(tmp.name)
 
-    return chunk_pdf(tmp_path, pdf_url, chunk_size)
+    return chunk_pdf(tmp_path, pdf_url, chunk_size, overlap)
 
 
-def chunk_pdf(pdf_path: Path, pdf_url: str, chunk_size: int = 5) -> list[PageChunk]:
+def chunk_pdf(pdf_path: Path, pdf_url: str, chunk_size: int = 5, overlap: int = 1) -> list[PageChunk]:
     """Chunk an already-downloaded PDF file."""
     chunks: list[PageChunk] = []
     list_number = 0
@@ -82,8 +82,11 @@ def chunk_pdf(pdf_path: Path, pdf_url: str, chunk_size: int = 5) -> list[PageChu
             list_number = _detect_list_number(pages_data[0][1])
 
         in_amendments = False
-        for start in range(0, len(pages_data), chunk_size):
+        step = max(chunk_size - overlap, 1)
+        for start in range(0, len(pages_data), step):
             batch = pages_data[start : start + chunk_size]
+            if not batch:
+                break
             combined_text = "\n\n".join(text for _, text, _ in batch)
             has_tables = any(ht for _, _, ht in batch)
             page_nums = [pn for pn, _, _ in batch]

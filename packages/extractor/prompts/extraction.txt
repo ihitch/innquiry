@@ -50,14 +50,16 @@ CRITICAL: amendments use a different layout. Do NOT let amendment data leak onto
 
 WORKED EXAMPLE of an Amendments-section split (critical to get right):
 
-Input text:
+Input text (note: the molecular formula is split across two lines — element
+symbols on one line, subscripts on the next — the SAME quirk described above):
     p.454-455 acmopatidum
     acmopatide acmopatida
     replace the chemical name, the molecular formula and structure by the following ones
     N-{[(2-oxo-2-{[2-(2-oxopiperidin-1-yl)ethyl]amino}ethyl)sulfanyl]acetyl}-L-α-glutamyl-...
     N-{[(2-oxo-2-{[2-(2-oxopipéridin-1-yl)éthyl]amino}éthyl)sulfanyl]acétyl}-L-α-glutamyl-...
     N-{[(2-oxo-2-{[2-(2-oxopiperidin-1-il)etil]amino}etil)sulfanil]acetil}-L-α-glutamil-...
-    C214H323N47O64S
+    C H N O S
+    214 323 47 64
     p.460 adupégimerum
     adupégimère adupégimera
     replace the chemical name by the following one
@@ -65,7 +67,15 @@ Input text:
     [new FR chemical name]
     [new ES chemical name]
 
-Correct output (TWO separate entries — the formula belongs to acmopatidum, NOT adupégimère):
+Reconstruction of the split formula: element row "C H N O S" + subscript row
+"214 323 47 64" → "C214H323N47O64S". Elements without a corresponding subscript
+get implicit "1" (here S has no subscript, so it's just "S"). This is the SAME
+reconstruction rule that applies to regular INN entries — it MUST be applied
+inside amendment blocks too. Never output null for the molecular formula when
+the element row and subscript row are both present in the amendment block.
+
+Correct output (TWO separate entries — the reconstructed formula belongs to
+acmopatide, NOT adupégimère):
 [
   {
     "inn_name": "acmopatide",
