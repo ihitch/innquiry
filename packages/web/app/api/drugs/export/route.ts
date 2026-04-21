@@ -53,8 +53,8 @@ export async function GET(req: NextRequest) {
   }
 
   const header = CSV_COLUMNS.join(",");
-  const rows = (data ?? []).map((row: Partial<Drug>) =>
-    CSV_COLUMNS.map((col) => escapeCell(row[col])).join(",")
+  const rows = (data ?? []).map((row) =>
+    CSV_COLUMNS.map((col) => escapeCell((row as unknown as Drug)[col])).join(",")
   );
   const csv = [header, ...rows].join("\n");
 

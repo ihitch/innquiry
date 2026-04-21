@@ -15,12 +15,12 @@ const columns = [
   col.accessor("inn_name", {
     header: "INN Name",
     cell: (info) => (
-      <span className="font-medium capitalize">{info.getValue()}</span>
+      <span className="font-medium capitalize text-gray-900">{info.getValue()}</span>
     ),
   }),
   col.accessor("inn_name_latin", {
     header: "Latin",
-    cell: (info) => <span className="text-gray-500 italic">{info.getValue() ?? "—"}</span>,
+    cell: (info) => <span className="text-gray-700 italic">{info.getValue() ?? "—"}</span>,
   }),
   col.accessor("entry_type", {
     header: "Type",
@@ -40,7 +40,7 @@ const columns = [
   col.accessor("molecular_formula", {
     header: "Formula",
     cell: (info) => (
-      <span className="font-mono text-xs">{info.getValue() ?? "—"}</span>
+      <span className="font-mono text-xs text-gray-800">{info.getValue() ?? "—"}</span>
     ),
   }),
   col.accessor("action_and_use", {
@@ -126,7 +126,7 @@ export function DrugTable({
                   onClick={() => onRowClick(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 align-top">
+                    <td key={cell.id} className="px-4 py-3 align-top text-gray-800">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

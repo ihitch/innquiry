@@ -63,10 +63,10 @@ export function DrugsView({ initialData, total: initialTotal, listNumbers }: Dru
       <header className="border-b bg-white px-6 py-4">
         <div className="flex items-center justify-between max-w-screen-xl mx-auto">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">innquiry</h1>
-            <p className="text-sm text-gray-500">WHO International Nonproprietary Names</p>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">innquiry</h1>
+            <p className="text-sm text-gray-600">WHO International Nonproprietary Names</p>
           </div>
-          <span className="text-sm text-gray-400">{total.toLocaleString()} entries</span>
+          <span className="text-sm text-gray-700">{total.toLocaleString()} entries</span>
         </div>
       </header>
 
@@ -109,7 +109,7 @@ function DrugDetail({ drug, onClose }: { drug: Drug; onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold capitalize">{drug.inn_name}</h2>
+          <h2 className="text-xl font-bold capitalize text-gray-900">{drug.inn_name}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
         </div>
 
@@ -155,7 +155,7 @@ function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="font-medium text-gray-500">{label}</dt>
-      <dd className="mt-0.5">{value}</dd>
+      <dd className="mt-0.5 text-gray-900">{value}</dd>
     </div>
   );
 }
