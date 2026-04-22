@@ -101,6 +101,19 @@ export function DrugsView({ initialData, total: initialTotal, listNumbers }: Dru
   );
 }
 
+const PDF_BUCKET_URL =
+  (process.env.NEXT_PUBLIC_SUPABASE_URL || "") + "/storage/v1/object/public/inn-pdfs";
+
+function buildPdfUrl(drug: Drug): string {
+  const pdfFile = `${PDF_BUCKET_URL}/pl${drug.list_number}.pdf`;
+  const viewer = `/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfFile)}`;
+  const hash: string[] = [];
+  if (drug.source_page) hash.push(`page=${drug.source_page}`);
+  const term = drug.inn_name_latin || drug.inn_name;
+  if (term) hash.push(`search=${encodeURIComponent(term)}&phrase=true&highlightall=true`);
+  return hash.length ? `${viewer}#${hash.join("&")}` : viewer;
+}
+
 function DrugDetail({ drug, onClose }: { drug: Drug; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-end" onClick={onClose}>
@@ -145,12 +158,12 @@ function DrugDetail({ drug, onClose }: { drug: Drug; onClose: () => void }) {
           )}
           <Field label="INN List" value={String(drug.list_number)} />
           {drug.publication_date && <Field label="Publication Date" value={drug.publication_date} />}
-          {drug.source_pdf_url && (
+          {drug.list_number && (
             <div>
               <dt className="font-medium text-gray-500">Source</dt>
               <dd className="mt-0.5">
                 <a
-                  href={drug.source_page ? `${drug.source_pdf_url}#page=${drug.source_page}` : drug.source_pdf_url}
+                  href={buildPdfUrl(drug)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary underline underline-offset-2 hover:no-underline"
