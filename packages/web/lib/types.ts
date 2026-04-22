@@ -15,6 +15,7 @@ export interface Drug {
   inn_name_french: string | null;
   inn_name_spanish: string | null;
   is_recommended: boolean;
+  is_amendment: boolean;
   entry_type: EntryType;
   molecular_formula: string | null;
   cas_number: string | null;

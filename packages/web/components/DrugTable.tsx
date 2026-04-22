@@ -15,7 +15,17 @@ const columns = [
   col.accessor("inn_name", {
     header: "INN Name",
     cell: (info) => (
-      <span className="font-medium capitalize text-gray-900">{info.getValue()}</span>
+      <span className="inline-flex items-center gap-2">
+        <span className="font-medium capitalize text-gray-900">{info.getValue()}</span>
+        {info.row.original.is_amendment && (
+          <span
+            title="Amendment to a previously published entry"
+            className="inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-800"
+          >
+            Amendment
+          </span>
+        )}
+      </span>
     ),
   }),
   col.accessor("inn_name_latin", {
@@ -35,7 +45,21 @@ const columns = [
   }),
   col.accessor("cas_number", {
     header: "CAS Number",
-    cell: (info) => info.getValue() ?? "—",
+    cell: (info) => {
+      const cas = info.getValue();
+      if (!cas) return "—";
+      return (
+        <a
+          href={`https://pubchem.ncbi.nlm.nih.gov/#query=${cas}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-blue-600 hover:underline"
+        >
+          {cas}
+        </a>
+      );
+    },
   }),
   col.accessor("molecular_formula", {
     header: "Formula",
